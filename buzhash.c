@@ -2,6 +2,8 @@
 // This is a translation to C of a GO package called 'buzhash'. The logic is
 // exactly the same, as much as feasible.
 
+// NOTE: Restic uses a 64-byte buffer, and chucks on lower 21 bits of zero.
+//
 #include <assert.h>
 #include "buzhash.h"
 
@@ -87,8 +89,11 @@ hash_byte(BUZHASH *p, uint8_t b)
     state = p->state;
     state = (state << 1) | (state >> 31);
     if (p->overflow) {
-        int toshift = bytehash[p->buf[p->bufpos]];
-        state ^= (toshift << p->bshiftn) | (toshift >> p->bshiftm);
+        uint32_t toshift = bytehash[p->buf[p->bufpos]];
+        if (p->bshiftn == 0)
+            state ^= toshift;
+        else
+            state ^= (toshift << p->bshiftn) | (toshift >> p->bshiftm);
     }
     p->buf[p->bufpos] = b;
     p->bufpos += 1;
@@ -111,26 +116,13 @@ main(void)
 {
     int i;
 
-    buzhash_init(&hasher, buff, 32);
+    buzhash_init(&hasher, buff, 17);
+    // printf("shift counts: %d %d\n", hasher.bshiftn, hasher.bshiftm);
     for (i = 0; i < 52; ++i) {
         uint32_t sum = hash_byte(&hasher, data[i]);
         printf("%c %08x\n", data[i], sum);
     }
     return 0;
 }
-
-#if 0
-const alpha = "abcde"
-
-func main() {
-    var sum uint32
-	hasher := buzhash.NewBuzHash(32)
-	fmt.Printf("%T\n", hasher)
-    for _, c := range []byte(alpha) {
-        sum = hasher.HashByte(c)
-        fmt.Printf("%c %08x\n", c, sum)
-    }
-}
-#endif
 
 #endif
