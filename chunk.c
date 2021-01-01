@@ -119,7 +119,11 @@ main(int argc, char *argv[])
     FILE *fp;
     uint8_t data[IOSIZE];
     int count;
+    int n;
+    int last;
 
+    n = 0;
+    last = 0;
     fp = fopen(argv[1], "rb");
     assert(fp);
     buzhash_init(&hasher, buff, 17);
@@ -130,7 +134,14 @@ main(int argc, char *argv[])
         // printf("shift counts: %d %d\n", hasher.bshiftn, hasher.bshiftm);
         for (i = 0; i < count; ++i) {
             uint32_t sum = hash_byte(&hasher, data[i]);
-            printf("%08x\n", sum);
+            if ((sum & 0xffff) == 0) {
+                if (n - last >= 32768)
+                    printf("%d %d %08x\n", n, n - last, sum);
+                else
+                    printf("%d %d %08x skip\n", n, n - last, sum);
+                last = n;
+            }
+            ++n;
         }
     }
     fclose(fp);

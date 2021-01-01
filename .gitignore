@@ -1,0 +1,4 @@
+*.o
+buzhash
+chunk
+data*
